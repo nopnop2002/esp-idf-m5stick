@@ -63,7 +63,7 @@ void app_main(void)
 		display_text(&dev, line, lineChar, strlen(lineChar), false);
 	}
 	vTaskDelay(2000 / portTICK_PERIOD_MS);
-	for(int line=bottom;line<bottom+10;line++) {
+	for(int line=bottom;line<bottom+20;line++) {
 		display_page_up(&dev);
 		lineChar[0] = 0x01;
 		sprintf(&lineChar[1], " Line%02d", line);
@@ -80,7 +80,7 @@ void app_main(void)
 		display_text(&dev, bottom-line-1, lineChar, strlen(lineChar), false);
 	}
 	vTaskDelay(2000 / portTICK_PERIOD_MS);
-	for(int line=bottom;line<bottom+10;line++) {
+	for(int line=bottom;line<bottom+20;line++) {
 		display_page_down(&dev);
 		lineChar[0] = 0x02;
 		sprintf(&lineChar[1], " Line%02d", line);
