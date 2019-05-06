@@ -1,5 +1,5 @@
 # esp-idf-m5stick
-Sample code for driving M5Stick OLED display with SH1107 driver using ESP-IDF's SPI driver.   
+Sample code for driving M5Stick OLED display using ESP-IDF's SPI driver.   
 
 ```
 git clone https://github.com/nopnop2002/esp-idf-m5stick
