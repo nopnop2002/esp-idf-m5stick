@@ -12,42 +12,42 @@
 
 void app_main(void)
 {
-    SH1107_t dev;
+	SH1107_t dev;
 	int center, top, bottom;
 	char lineChar[16];
 
-    spi_master_init(&dev);
-    spi_init(&dev, 64, 128);
+	spi_master_init(&dev);
+	spi_init(&dev, 64, 128);
 
 	clear_screen(&dev, false);
 	display_contrast(&dev, 0xff);
-    display_text(&dev, 0, "M5 Stick", 8, false);
-    display_text(&dev, 1, "64x128  ", 8, false);
-    display_text(&dev, 2, "ABCDEFGH", 8, false);
-    display_text(&dev, 3, "abcdefgh", 8, false);
-    display_text(&dev, 4, "01234567", 8, false);
-    display_text(&dev, 5, "Hello   ", 8, false);
-    display_text(&dev, 6, "World!! ", 8, false);
+	display_text(&dev, 0, "M5 Stick", 8, false);
+	display_text(&dev, 1, "64x128  ", 8, false);
+	display_text(&dev, 2, "ABCDEFGH", 8, false);
+	display_text(&dev, 3, "abcdefgh", 8, false);
+	display_text(&dev, 4, "01234567", 8, false);
+	display_text(&dev, 5, "Hello   ", 8, false);
+	display_text(&dev, 6, "World!! ", 8, false);
 
-    display_text(&dev, 8, "M5 Stick", 8, true);
-    display_text(&dev, 9, "64x128  ", 8, true);
-    display_text(&dev, 10, "ABCDEFGH", 8, true);
-    display_text(&dev, 11, "abcdefgh", 8, true);
-    display_text(&dev, 12, "01234567", 8, true);
-    display_text(&dev, 13, "Hello   ", 8, true);
-    display_text(&dev, 14, "World!! ", 8, true);
+	display_text(&dev, 8, "M5 Stick", 8, true);
+	display_text(&dev, 9, "64x128  ", 8, true);
+	display_text(&dev, 10, "ABCDEFGH", 8, true);
+	display_text(&dev, 11, "abcdefgh", 8, true);
+	display_text(&dev, 12, "01234567", 8, true);
+	display_text(&dev, 13, "Hello   ", 8, true);
+	display_text(&dev, 14, "World!! ", 8, true);
 	clear_line(&dev, 15, true);
 	vTaskDelay(3000 / portTICK_PERIOD_MS);
-    
+	
 	// Display Count Down
-    uint8_t image[24];
-    memset(image, 0, sizeof(image));
+	uint8_t image[24];
+	memset(image, 0, sizeof(image));
 	center = 7;
 	display_image(&dev, center-1, 20, image, sizeof(image));
 	display_image(&dev, center, 20, image, sizeof(image));
 	display_image(&dev, center+1, 20, image, sizeof(image));
 	for(int font=0x39;font>0x30;font--) {
-    	memset(image, 0, sizeof(image));
+		memset(image, 0, sizeof(image));
 		display_image(&dev, center, 28, image, 8);
 		memcpy(image, font8x8_basic_tr[font], 8);
 		display_image(&dev, center, 28, image, 8);
