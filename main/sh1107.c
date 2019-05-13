@@ -27,15 +27,15 @@ void spi_master_init(SH1107_t * dev)
 {
 	esp_err_t ret;
 
-    ret = gpio_set_direction( GPIO_CS, GPIO_MODE_OUTPUT );
+	ret = gpio_set_direction( GPIO_CS, GPIO_MODE_OUTPUT );
 	ESP_LOGI(tag, "gpio_set_direction=%d",ret);
 	assert(ret==ESP_OK);
-    gpio_set_level( GPIO_CS, 1 );
+	gpio_set_level( GPIO_CS, 1 );
 
-    ret = gpio_set_direction( GPIO_DC, GPIO_MODE_OUTPUT );
+	ret = gpio_set_direction( GPIO_DC, GPIO_MODE_OUTPUT );
 	ESP_LOGI(tag, "gpio_set_direction=%d",ret);
 	assert(ret==ESP_OK);
-    gpio_set_level( GPIO_DC, 0 );
+	gpio_set_level( GPIO_DC, 0 );
 
    	ret = gpio_set_direction( GPIO_RESET, GPIO_MODE_OUTPUT );
 	ESP_LOGI(tag, "gpio_set_direction=%d",ret);
@@ -44,23 +44,23 @@ void spi_master_init(SH1107_t * dev)
 	vTaskDelay( pdMS_TO_TICKS( 100 ) );
 	gpio_set_level( GPIO_RESET, 1 );
 
-    spi_bus_config_t spi_bus_config = {
-        .sclk_io_num = GPIO_SCLK,
-        .mosi_io_num = GPIO_MOSI,
-        .miso_io_num = -1,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-    };
+	spi_bus_config_t spi_bus_config = {
+		.sclk_io_num = GPIO_SCLK,
+		.mosi_io_num = GPIO_MOSI,
+		.miso_io_num = -1,
+		.quadwp_io_num = -1,
+		.quadhd_io_num = -1,
+	};
 
-    ret = spi_bus_initialize( HSPI_HOST, &spi_bus_config, 1 );
+	ret = spi_bus_initialize( HSPI_HOST, &spi_bus_config, 1 );
 	ESP_LOGI(tag, "spi_bus_initialize=%d",ret);
 	assert(ret==ESP_OK);
 
-    spi_device_interface_config_t devcfg;
-    memset( &devcfg, 0, sizeof( spi_device_interface_config_t ) );
-    devcfg.clock_speed_hz = SPI_Frequency;
-    devcfg.spics_io_num = GPIO_CS;
-    devcfg.queue_size = 1;
+	spi_device_interface_config_t devcfg;
+	memset( &devcfg, 0, sizeof( spi_device_interface_config_t ) );
+	devcfg.clock_speed_hz = SPI_Frequency;
+	devcfg.spics_io_num = GPIO_CS;
+	devcfg.queue_size = 1;
 
 	spi_device_handle_t handle;
 	ret = spi_bus_add_device( HSPI_HOST, &devcfg, &handle);
@@ -72,35 +72,35 @@ void spi_master_init(SH1107_t * dev)
 
 bool spi_master_write_byte(spi_device_handle_t SPIHandle, const uint8_t* Data, size_t DataLength )
 {
-    spi_transaction_t SPITransaction;
+	spi_transaction_t SPITransaction;
 	esp_err_t ret;
 
-    if ( DataLength > 0 ) {
-        memset( &SPITransaction, 0, sizeof( spi_transaction_t ) );
-        SPITransaction.length = DataLength * 8;
-        SPITransaction.tx_buffer = Data;
-        ret = spi_device_transmit( SPIHandle, &SPITransaction );
+	if ( DataLength > 0 ) {
+		memset( &SPITransaction, 0, sizeof( spi_transaction_t ) );
+		SPITransaction.length = DataLength * 8;
+		SPITransaction.tx_buffer = Data;
+		ret = spi_device_transmit( SPIHandle, &SPITransaction );
 		//ESP_LOGI(tag, "spi_device_transmit=%d",ret);
 		assert(ret==ESP_OK);
-    }
+	}
 
-    return true;
+	return true;
 }
 
 bool spi_master_write_command(SH1107_t * dev, uint8_t Command )
 {
 	//ESP_LOGI(tag, "spi_master_write_command 0x%x",Command);
-    static uint8_t CommandByte = 0;
-    CommandByte = Command;
+	static uint8_t CommandByte = 0;
+	CommandByte = Command;
 	gpio_set_level( GPIO_DC, SPI_Command_Mode );
-    return spi_master_write_byte( dev->_SPIHandle, &CommandByte, 1 );
+	return spi_master_write_byte( dev->_SPIHandle, &CommandByte, 1 );
 }
 
 bool spi_master_write_data(SH1107_t * dev, const uint8_t* Data, size_t DataLength )
 {
 	//ESP_LOGI(tag, "spi_master_write_data 0x%x",Data[0]);
 	gpio_set_level( GPIO_DC, SPI_Data_Mode );
-    return spi_master_write_byte( dev->_SPIHandle, Data, DataLength );
+	return spi_master_write_byte( dev->_SPIHandle, Data, DataLength );
 }
 
 void spi_init(SH1107_t * dev, int width, int height)
@@ -142,11 +142,11 @@ void display_text(SH1107_t * dev, int page, char * text, int text_len, bool inve
 	int _text_len = text_len;
 	if (_text_len > 8) _text_len = 8;
 
-    uint8_t seg = 0;
+	uint8_t seg = 0;
 	uint8_t image[8];
 	for (uint8_t i = 0; i < _text_len; i++) {
 		memcpy(image, font8x8_basic_tr[(uint8_t)text[i]], 8);
-        if (invert) display_invert(image, 8);
+		if (invert) display_invert(image, 8);
 		display_image(dev, page, seg, image, 8);
 		for(int j=0;j<8;j++) 
 			dev->_page[page]._segs[seg+j] = image[j];
@@ -161,7 +161,7 @@ void display_image(SH1107_t * dev, int page, int seg, uint8_t * images, int widt
 
 	uint8_t columLow = seg & 0x0F;
 	uint8_t columHigh = (seg >> 4) & 0x0F;
-    //ESP_LOGI(tag, "page=%x columLow=%x columHigh=%x",page,columLow,columHigh);
+	//ESP_LOGI(tag, "page=%x columLow=%x columHigh=%x",page,columLow,columHigh);
 
 	// Set Higher Column Start Address for Page Addressing Mode
 	spi_master_write_command(dev, (0x10 + columHigh));
@@ -228,23 +228,23 @@ void display_contrast(SH1107_t * dev, int contrast) {
 
 void display_invert(uint8_t *buf, size_t blen)
 {
-    uint8_t wk;
-    for(int i=0; i<blen; i++){
-        wk = buf[i];
-        buf[i] = ~wk;
-    }
+	uint8_t wk;
+	for(int i=0; i<blen; i++){
+		wk = buf[i];
+		buf[i] = ~wk;
+	}
 }
 
 void display_fadeout(SH1107_t * dev)
 {
 	uint8_t image[1];
-    for(int page=0; page<dev->_pages; page++) {
-        image[0] = 0xFF;
-        for(int line=0; line<8; line++) {
-            image[0] = image[0] << 1;
+	for(int page=0; page<dev->_pages; page++) {
+		image[0] = 0xFF;
+		for(int line=0; line<8; line++) {
+			image[0] = image[0] << 1;
 			for(int seg=0; seg<dev->_width; seg++) {
 				display_image(dev, page, seg, image, 1);
 			}
-        }
-    }
+		}
+	}
 }
