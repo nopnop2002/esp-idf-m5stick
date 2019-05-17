@@ -8,7 +8,7 @@ make menuconfig
 make flash
 ```
 
-\*There is no specific menu item.   
+\*There is no MENU ITEM where this application is peculiar.   
 
 ![M5Stick](https://user-images.githubusercontent.com/6020549/57205754-b70bf780-6ffb-11e9-9eeb-9dfbe8e21fee.JPG)
 
