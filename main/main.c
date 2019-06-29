@@ -13,7 +13,7 @@
 void app_main(void)
 {
 	SH1107_t dev;
-	int center, top, bottom;
+	int center, bottom;
 	char lineChar[16];
 
 	spi_master_init(&dev);
@@ -53,42 +53,48 @@ void app_main(void)
 		display_image(&dev, center, 28, image, 8);
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
-	
-	// Page Up
+
+	// Scroll Up
 	bottom = 16;
 	clear_screen(&dev, false);
-	for (int line=0;line<bottom;line++) {
+	display_contrast(&dev, 0xff);
+	display_text(&dev, 0, "ScrollUP", 8, true);
+	software_scroll(&dev, 15, 1);
+	for (int line=0;line<bottom+10;line++) {
 		lineChar[0] = 0x01;
-		sprintf(&lineChar[1], " Line%02d", line);
-		display_text(&dev, line, lineChar, strlen(lineChar), false);
+		sprintf(&lineChar[1], "Line %02d", line);
+		scroll_text(&dev, lineChar, strlen(lineChar), false);
+		vTaskDelay(500 / portTICK_PERIOD_MS);
 	}
-	vTaskDelay(2000 / portTICK_PERIOD_MS);
-	for(int line=bottom;line<bottom+20;line++) {
-		display_page_up(&dev);
-		lineChar[0] = 0x01;
-		sprintf(&lineChar[1], " Line%02d", line);
-		display_text(&dev, bottom-1, lineChar, strlen(lineChar), false);
-		vTaskDelay(200 / portTICK_PERIOD_MS);
+	vTaskDelay(3000 / portTICK_PERIOD_MS);
+
+	// Scroll Down
+	clear_screen(&dev, false);
+	display_contrast(&dev, 0xff);
+	display_text(&dev, 0, "ScrollDN", 8, true);
+	software_scroll(&dev, 1, 15);
+	for (int line=0;line<bottom+10;line++) {
+		lineChar[0] = 0x02;
+		sprintf(&lineChar[1], "Line %02d", line);
+		scroll_text(&dev, lineChar, strlen(lineChar), false);
+		vTaskDelay(500 / portTICK_PERIOD_MS);
 	}
-	vTaskDelay(1000 / portTICK_PERIOD_MS);
-	
+	vTaskDelay(3000 / portTICK_PERIOD_MS);
+
 	// Page Down
 	clear_screen(&dev, false);
-	for (int line=0;line<bottom;line++) {
+	display_contrast(&dev, 0xff);
+	display_text(&dev, 0, "PageDOWN", 8, true);
+	software_scroll(&dev, 1, 15);
+	for (int line=0;line<bottom+10;line++) {
+		if ( (line % 15) == 0) scroll_clear(&dev);
 		lineChar[0] = 0x02;
-		sprintf(&lineChar[1], " Line%02d", line);
-		display_text(&dev, bottom-line-1, lineChar, strlen(lineChar), false);
+		sprintf(&lineChar[1], "Line %02d", line);
+		scroll_text(&dev, lineChar, strlen(lineChar), false);
+		vTaskDelay(500 / portTICK_PERIOD_MS);
 	}
-	vTaskDelay(2000 / portTICK_PERIOD_MS);
-	for(int line=bottom;line<bottom+20;line++) {
-		display_page_down(&dev);
-		lineChar[0] = 0x02;
-		sprintf(&lineChar[1], " Line%02d", line);
-		display_text(&dev, 0, lineChar, strlen(lineChar), false);
-		vTaskDelay(200 / portTICK_PERIOD_MS);
-	}
-	vTaskDelay(1000 / portTICK_PERIOD_MS);
-
+	vTaskDelay(3000 / portTICK_PERIOD_MS);
+	
 	// Invert
 	clear_screen(&dev, true);
 	display_contrast(&dev, 0xff);

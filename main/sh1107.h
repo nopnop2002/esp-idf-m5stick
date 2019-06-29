@@ -4,6 +4,8 @@
 #include "driver/spi_master.h"
 
 typedef struct {
+	bool _valid;
+	int _segLen; // 0-128
 	uint8_t _segs[64];
 } PAGE_t;
 
@@ -12,6 +14,10 @@ typedef struct {
 	int _height;
 	int _pages;
 	spi_device_handle_t _SPIHandle;
+	bool _scEnable;
+	int _scStart;
+	int _scEnd;
+	int _scDirection;
 	PAGE_t _page[16];
 } SH1107_t;
 
@@ -25,8 +31,9 @@ void display_image(SH1107_t * dev, int page, int seg, uint8_t * images, int widt
 void clear_screen(SH1107_t * dev, bool invert);
 void clear_line(SH1107_t * dev, int page, bool invert);
 void display_contrast(SH1107_t * dev, int contrast);
-void display_page_up(SH1107_t * dev);
-void display_page_down(SH1107_t * dev);
+void software_scroll(SH1107_t * dev, int start, int end);
+void scroll_text(SH1107_t * dev, char * text, int text_len, bool invert);
+void scroll_clear(SH1107_t * dev);
 void display_invert(uint8_t *buf, size_t blen);
 void display_fadeout(SH1107_t * dev);
 #endif /* MAIN_SH1107_H_ */

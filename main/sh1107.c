@@ -148,8 +148,6 @@ void display_text(SH1107_t * dev, int page, char * text, int text_len, bool inve
 		memcpy(image, font8x8_basic_tr[(uint8_t)text[i]], 8);
 		if (invert) display_invert(image, 8);
 		display_image(dev, page, seg, image, 8);
-		for(int j=0;j<8;j++) 
-			dev->_page[page]._segs[seg+j] = image[j];
 		seg = seg + 8;
 	}
 }
@@ -190,33 +188,6 @@ void clear_line(SH1107_t * dev, int page, bool invert)
 	display_text(dev, page, zero, dev->_width, invert);
 }
 
-void display_page_up(SH1107_t * dev)
-{
-	for (int page = 1; page < dev->_pages; page++) {
-		for(int seg = 0; seg < dev->_width; seg++) {
-			dev->_page[page-1]._segs[seg] = dev->_page[page]._segs[seg];
-		}
-	}
-	memset(dev->_page[dev->_pages-1]._segs, 0, dev->_width);
-	for (int page = 0; page < dev->_pages; page++) {
-		display_image(dev, page, 0, dev->_page[page]._segs, dev->_width);
-	}
-}
-
-
-void display_page_down(SH1107_t * dev)
-{
-	for (int page = dev->_pages-1; page > 0; page--) {
-		for(int seg = 0; seg < dev->_width; seg++) {
-			dev->_page[page]._segs[seg] = dev->_page[page-1]._segs[seg];
-		}
-	}
-	memset(dev->_page[0]._segs, 0, dev->_width);
-	for (int page = 0; page < dev->_pages; page++) {
-		display_image(dev, page, 0, dev->_page[page]._segs, dev->_width);
-	}
-}
-
 void display_contrast(SH1107_t * dev, int contrast) {
 	int _contrast = contrast;
 	if (contrast < 0x0) _contrast = 0;
@@ -224,6 +195,78 @@ void display_contrast(SH1107_t * dev, int contrast) {
 
 	spi_master_write_command(dev, 0x81);
 	spi_master_write_command(dev, _contrast);
+}
+
+void software_scroll(SH1107_t * dev, int start, int end)
+{
+	ESP_LOGD(tag, "software_scroll start=%d end=%d _pages=%d", start, end, dev->_pages);
+	if (start < 0 || end < 0) {
+		dev->_scEnable = false;
+	} else if (start >= dev->_pages || end >= dev->_pages) {
+		dev->_scEnable = false;
+	} else {
+		dev->_scEnable = true;
+		dev->_scStart = start;
+		dev->_scEnd = end;
+		dev->_scDirection = 1;
+		if (start > end ) dev->_scDirection = -1;
+		for (int i=0;i<dev->_pages;i++) {
+			dev->_page[i]._valid = false;
+			dev->_page[i]._segLen = 0;
+		}
+	}
+}
+
+void scroll_text(SH1107_t * dev, char * text, int text_len, bool invert)
+{
+	ESP_LOGD(tag, "dev->_scEnable=%d", dev->_scEnable);
+	if (dev->_scEnable == false) return;
+
+	int srcIndex = dev->_scEnd - dev->_scDirection;
+	while(1) {
+		int dstIndex = srcIndex + dev->_scDirection;
+		ESP_LOGD(tag, "srcIndex=%d dstIndex=%d", srcIndex,dstIndex);
+		dev->_page[dstIndex]._valid = dev->_page[srcIndex]._valid;
+		dev->_page[dstIndex]._segLen = dev->_page[srcIndex]._segLen;
+		for(int seg = 0; seg < dev->_width; seg++) {
+			dev->_page[dstIndex]._segs[seg] = dev->_page[srcIndex]._segs[seg];
+		}
+		ESP_LOGD(tag, "_valid=%d", dev->_page[dstIndex]._valid);
+		if (dev->_page[dstIndex]._valid) display_image(dev, dstIndex, 0, dev->_page[dstIndex]._segs, dev->_page[srcIndex]._segLen);
+		if (srcIndex == dev->_scStart) break;
+		srcIndex = srcIndex - dev->_scDirection;
+	}
+	
+	int _text_len = text_len;
+	if (_text_len > 16) _text_len = 16;
+	
+	uint8_t seg = 0;
+	uint8_t image[8];
+	for (uint8_t i = 0; i < _text_len; i++) {
+		memcpy(image, font8x8_basic_tr[(uint8_t)text[i]], 8);
+		if (invert) display_invert(image, 8);
+		display_image(dev, srcIndex, seg, image, 8);
+		for(int j=0;j<8;j++) dev->_page[srcIndex]._segs[seg+j] = image[j];
+		seg = seg + 8;
+	}
+	dev->_page[srcIndex]._valid = true;
+	dev->_page[srcIndex]._segLen = seg;
+}
+
+void scroll_clear(SH1107_t * dev)
+{
+	ESP_LOGD(tag, "scroll_clear dev->_scEnable=%d", dev->_scEnable);
+	if (dev->_scEnable == false) return;
+	
+	int srcIndex = dev->_scEnd - dev->_scDirection;
+	while(1) {
+		int dstIndex = srcIndex + dev->_scDirection;
+		ESP_LOGD(tag, "dstIndex=%d", dstIndex);
+		clear_line(dev, dstIndex, false);
+		dev->_page[dstIndex]._valid = false;
+		if (dstIndex == dev->_scStart) break;
+		srcIndex = srcIndex - dev->_scDirection;
+	}
 }
 
 void display_invert(uint8_t *buf, size_t blen)
