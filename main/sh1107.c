@@ -238,12 +238,20 @@ void scroll_text(SH1107_t * dev, char * text, int text_len, bool invert)
 	}
 	
 	int _text_len = text_len;
-	if (_text_len > 16) _text_len = 16;
+	//if (_text_len > 16) _text_len = 16;
+	if (_text_len > 8) _text_len = 8;
 	
 	uint8_t seg = 0;
 	uint8_t image[8];
 	for (uint8_t i = 0; i < _text_len; i++) {
 		memcpy(image, font8x8_basic_tr[(uint8_t)text[i]], 8);
+		if (invert) display_invert(image, 8);
+		display_image(dev, srcIndex, seg, image, 8);
+		for(int j=0;j<8;j++) dev->_page[srcIndex]._segs[seg+j] = image[j];
+		seg = seg + 8;
+	}
+	for (uint8_t i = _text_len; i < 8; i++) {
+		memcpy(image, font8x8_basic_tr[0x20], 8);
 		if (invert) display_invert(image, 8);
 		display_image(dev, srcIndex, seg, image, 8);
 		for(int j=0;j<8;j++) dev->_page[srcIndex]._segs[seg+j] = image[j];
