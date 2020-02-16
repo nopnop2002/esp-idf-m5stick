@@ -14,7 +14,7 @@ void app_main(void)
 {
 	SH1107_t dev;
 	int center, bottom;
-	char lineChar[16];
+	char lineChar[20];
 
 	spi_master_init(&dev);
 	spi_init(&dev, 64, 128);
