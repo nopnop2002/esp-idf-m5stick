@@ -10,10 +10,16 @@
 
 #define tag "SH1107"
 
+#define GPIO_MOSI  23
+#define GPIO_SCLK  18
+#define GPIO_CS    14
+#define GPIO_DC    27
+#define GPIO_RESET 33
+
 void app_main(void)
 {
 	SH1107_t dev;
-	spi_master_init(&dev);
+	spi_master_init(&dev, GPIO_MOSI, GPIO_SCLK, GPIO_CS, GPIO_DC, GPIO_RESET);
 	sh1107_display_init(&dev, 64, 128);
 	sh1107_display_contrast(&dev, 0xff);
 	

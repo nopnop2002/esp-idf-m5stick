@@ -12,37 +12,50 @@
 
 #define TAG "SH1107"
 
+#if 0
 static const int GPIO_MOSI = 23;
 static const int GPIO_SCLK = 18;
 static const int GPIO_CS   = 14;
 static const int GPIO_DC   = 27;
 static const int GPIO_RESET= 33;
+#endif
 
 static const int SPI_Command_Mode = 0;
 static const int SPI_Data_Mode = 1;
 //static const int SPI_Frequency = 1000000;
 static const int SPI_Frequency = 8000000;
 
-void spi_master_init(SH1107_t * dev)
+void spi_master_init(SH1107_t * dev, int16_t GPIO_MOSI, int16_t GPIO_SCLK, int16_t GPIO_CS, int16_t GPIO_DC, int16_t GPIO_RESET)
 {
 	esp_err_t ret;
+	ESP_LOGI(TAG, "GPIO_MOSI=%d", GPIO_MOSI);
+	ESP_LOGI(TAG, "GPIO_SCLK=%d", GPIO_SCLK);
+	ESP_LOGI(TAG, "GPIO_CS=%d", GPIO_CS);
+	ESP_LOGI(TAG, "GPIO_DC=%d", GPIO_DC);
+	ESP_LOGI(TAG, "GPIO_RESET=%d", GPIO_RESET);
 
-	ret = gpio_set_direction( GPIO_CS, GPIO_MODE_OUTPUT );
-	ESP_LOGI(TAG, "gpio_set_direction=%d",ret);
-	assert(ret==ESP_OK);
-	gpio_set_level( GPIO_CS, 1 );
+	if (GPIO_CS >= 0) {
+		ret = gpio_set_direction( GPIO_CS, GPIO_MODE_OUTPUT );
+		ESP_LOGI(TAG, "gpio_set_direction(GPIO_CS)=%d",ret);
+		assert(ret==ESP_OK);
+		gpio_set_level( GPIO_CS, 1 );
+	}
 
-	ret = gpio_set_direction( GPIO_DC, GPIO_MODE_OUTPUT );
-	ESP_LOGI(TAG, "gpio_set_direction=%d",ret);
-	assert(ret==ESP_OK);
-	gpio_set_level( GPIO_DC, 0 );
+	if (GPIO_DC >= 0) {
+		ret = gpio_set_direction( GPIO_DC, GPIO_MODE_OUTPUT );
+		ESP_LOGI(TAG, "gpio_set_direction(GPIO_DC)=%d",ret);
+		assert(ret==ESP_OK);
+		gpio_set_level( GPIO_DC, 0 );
+	}
 
-	ret = gpio_set_direction( GPIO_RESET, GPIO_MODE_OUTPUT );
-	ESP_LOGI(TAG, "gpio_set_direction=%d",ret);
-	assert(ret==ESP_OK);
-	gpio_set_level( GPIO_RESET, 0 );
-	vTaskDelay( pdMS_TO_TICKS( 100 ) );
-	gpio_set_level( GPIO_RESET, 1 );
+	if (GPIO_RESET >= 0) {
+		ret = gpio_set_direction( GPIO_RESET, GPIO_MODE_OUTPUT );
+		ESP_LOGI(TAG, "gpio_set_direction(GPIO_RESET)=%d",ret);
+		assert(ret==ESP_OK);
+		gpio_set_level( GPIO_RESET, 0 );
+		vTaskDelay( pdMS_TO_TICKS( 100 ) );
+		gpio_set_level( GPIO_RESET, 1 );
+	}
 
 	spi_bus_config_t spi_bus_config = {
 		.sclk_io_num = GPIO_SCLK,
@@ -66,6 +79,7 @@ void spi_master_init(SH1107_t * dev)
 	ret = spi_bus_add_device( HSPI_HOST, &devcfg, &handle);
 	ESP_LOGI(TAG, "spi_bus_add_device=%d",ret);
 	assert(ret==ESP_OK);
+	dev->_dc = GPIO_DC;
 	dev->_SPIHandle = handle;
 }
 
@@ -92,14 +106,16 @@ bool spi_master_write_command(SH1107_t * dev, uint8_t Command )
 	//ESP_LOGI(TAG, "spi_master_write_command 0x%x",Command);
 	static uint8_t CommandByte = 0;
 	CommandByte = Command;
-	gpio_set_level( GPIO_DC, SPI_Command_Mode );
+	//gpio_set_level( GPIO_DC, SPI_Command_Mode );
+	gpio_set_level( dev->_dc, SPI_Command_Mode );
 	return spi_master_write_byte( dev->_SPIHandle, &CommandByte, 1 );
 }
 
 bool spi_master_write_data(SH1107_t * dev, const uint8_t* Data, size_t DataLength )
 {
 	//ESP_LOGI(TAG, "spi_master_write_data 0x%x",Data[0]);
-	gpio_set_level( GPIO_DC, SPI_Data_Mode );
+	//gpio_set_level( GPIO_DC, SPI_Data_Mode );
+	gpio_set_level( dev->_dc, SPI_Data_Mode );
 	return spi_master_write_byte( dev->_SPIHandle, Data, DataLength );
 }
 
@@ -281,7 +297,7 @@ void sh1107_display_direction(SH1107_t * dev, int dir) {
 	dev->_direction = dir;
 }
 
-static uint8_t rotate_byte(uint8_t ch1) {
+uint8_t rotate_byte(uint8_t ch1) {
 	uint8_t ch2 = 0;
 	for (int j=0;j<8;j++) {
 		ch2 = (ch2 << 1) + (ch1 & 0x01);
