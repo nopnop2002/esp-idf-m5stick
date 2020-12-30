@@ -3,38 +3,33 @@
 
 #include "driver/spi_master.h"
 
-typedef struct {
-	bool _valid;
-	int _segLen; // 0-128
-	uint8_t _segs[64];
-} PAGE_t;
+#define DIRECTION0		0
+#define DIRECTION90		1
+#define DIRECTION180	2
+#define DIRECTION270	3
 
 typedef struct {
 	int _width;
 	int _height;
 	int _pages;
+	int _direction;
 	spi_device_handle_t _SPIHandle;
-	bool _scEnable;
-	int _scStart;
-	int _scEnd;
-	int _scDirection;
-	PAGE_t _page[16];
 } SH1107_t;
 
 void spi_master_init(SH1107_t * dev);
 bool spi_master_write_byte(spi_device_handle_t SPIHandle, const uint8_t* Data, size_t DataLength );
 bool spi_master_write_command(SH1107_t * dev, uint8_t Command );
 bool spi_master_write_data(SH1107_t * dev, const uint8_t* Data, size_t DataLength );
-void spi_init(SH1107_t * dev, int width, int height);
-void display_text(SH1107_t * dev, int page, char * text, int text_len, bool invert);
-void display_image(SH1107_t * dev, int page, int seg, uint8_t * images, int width);
-void clear_screen(SH1107_t * dev, bool invert);
-void clear_line(SH1107_t * dev, int page, bool invert);
-void display_contrast(SH1107_t * dev, int contrast);
-void software_scroll(SH1107_t * dev, int start, int end);
-void scroll_text(SH1107_t * dev, char * text, int text_len, bool invert);
-void scroll_clear(SH1107_t * dev);
-void display_invert(uint8_t *buf, size_t blen);
-void display_fadeout(SH1107_t * dev);
-#endif /* MAIN_SH1107_H_ */
+void sh1107_display_init(SH1107_t * dev, int width, int height);
+void sh1107_display_text(SH1107_t * dev, int row, int col, char * text, int text_len, bool invert);
+void sh1107_display_image(SH1107_t * dev, int page, int seg, uint8_t * images, int width);
+void sh1107_clear_screen(SH1107_t * dev, bool invert);
+void sh1107_clear_line(SH1107_t * dev, int page, bool invert);
+void sh1107_display_contrast(SH1107_t * dev, int contrast);
+void sh1107_display_invert(uint8_t *buf, size_t blen);
+void sh1107_display_fadeout(SH1107_t * dev);
+void sh1107_display_direction(SH1107_t * dev, int dir);
+static uint8_t rotate_byte(uint8_t ch1);
+void sh1107_display_rotate(uint8_t * buf, int dir);
 
+#endif /* MAIN_SH1107_H_ */

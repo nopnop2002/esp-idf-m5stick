@@ -10,7 +10,7 @@
 #include "sh1107.h"
 #include "font8x8_basic.h"
 
-#define tag "SH1107"
+#define TAG "SH1107"
 
 static const int GPIO_MOSI = 23;
 static const int GPIO_SCLK = 18;
@@ -28,17 +28,17 @@ void spi_master_init(SH1107_t * dev)
 	esp_err_t ret;
 
 	ret = gpio_set_direction( GPIO_CS, GPIO_MODE_OUTPUT );
-	ESP_LOGI(tag, "gpio_set_direction=%d",ret);
+	ESP_LOGI(TAG, "gpio_set_direction=%d",ret);
 	assert(ret==ESP_OK);
 	gpio_set_level( GPIO_CS, 1 );
 
 	ret = gpio_set_direction( GPIO_DC, GPIO_MODE_OUTPUT );
-	ESP_LOGI(tag, "gpio_set_direction=%d",ret);
+	ESP_LOGI(TAG, "gpio_set_direction=%d",ret);
 	assert(ret==ESP_OK);
 	gpio_set_level( GPIO_DC, 0 );
 
-   	ret = gpio_set_direction( GPIO_RESET, GPIO_MODE_OUTPUT );
-	ESP_LOGI(tag, "gpio_set_direction=%d",ret);
+	ret = gpio_set_direction( GPIO_RESET, GPIO_MODE_OUTPUT );
+	ESP_LOGI(TAG, "gpio_set_direction=%d",ret);
 	assert(ret==ESP_OK);
 	gpio_set_level( GPIO_RESET, 0 );
 	vTaskDelay( pdMS_TO_TICKS( 100 ) );
@@ -53,7 +53,7 @@ void spi_master_init(SH1107_t * dev)
 	};
 
 	ret = spi_bus_initialize( HSPI_HOST, &spi_bus_config, 1 );
-	ESP_LOGI(tag, "spi_bus_initialize=%d",ret);
+	ESP_LOGI(TAG, "spi_bus_initialize=%d",ret);
 	assert(ret==ESP_OK);
 
 	spi_device_interface_config_t devcfg;
@@ -64,7 +64,7 @@ void spi_master_init(SH1107_t * dev)
 
 	spi_device_handle_t handle;
 	ret = spi_bus_add_device( HSPI_HOST, &devcfg, &handle);
-	ESP_LOGI(tag, "spi_bus_add_device=%d",ret);
+	ESP_LOGI(TAG, "spi_bus_add_device=%d",ret);
 	assert(ret==ESP_OK);
 	dev->_SPIHandle = handle;
 }
@@ -80,7 +80,7 @@ bool spi_master_write_byte(spi_device_handle_t SPIHandle, const uint8_t* Data, s
 		SPITransaction.length = DataLength * 8;
 		SPITransaction.tx_buffer = Data;
 		ret = spi_device_transmit( SPIHandle, &SPITransaction );
-		//ESP_LOGI(tag, "spi_device_transmit=%d",ret);
+		//ESP_LOGI(TAG, "spi_device_transmit=%d",ret);
 		assert(ret==ESP_OK);
 	}
 
@@ -89,7 +89,7 @@ bool spi_master_write_byte(spi_device_handle_t SPIHandle, const uint8_t* Data, s
 
 bool spi_master_write_command(SH1107_t * dev, uint8_t Command )
 {
-	//ESP_LOGI(tag, "spi_master_write_command 0x%x",Command);
+	//ESP_LOGI(TAG, "spi_master_write_command 0x%x",Command);
 	static uint8_t CommandByte = 0;
 	CommandByte = Command;
 	gpio_set_level( GPIO_DC, SPI_Command_Mode );
@@ -98,16 +98,17 @@ bool spi_master_write_command(SH1107_t * dev, uint8_t Command )
 
 bool spi_master_write_data(SH1107_t * dev, const uint8_t* Data, size_t DataLength )
 {
-	//ESP_LOGI(tag, "spi_master_write_data 0x%x",Data[0]);
+	//ESP_LOGI(TAG, "spi_master_write_data 0x%x",Data[0]);
 	gpio_set_level( GPIO_DC, SPI_Data_Mode );
 	return spi_master_write_byte( dev->_SPIHandle, Data, DataLength );
 }
 
-void spi_init(SH1107_t * dev, int width, int height)
+void sh1107_display_init(SH1107_t * dev, int width, int height)
 {
 	dev->_width = width;
 	dev->_height = height;
 	dev->_pages = height / 8;
+	dev->_direction = DIRECTION0;
 
 	spi_master_write_command(dev, 0xAE);	// Turn display off
 	spi_master_write_command(dev, 0xDC);	// Set display start line
@@ -136,30 +137,71 @@ void spi_init(SH1107_t * dev, int width, int height)
 	spi_master_write_command(dev, 0xAF);	// Turn display on
 }
 
-void display_text(SH1107_t * dev, int page, char * text, int text_len, bool invert)
+void sh1107_display_text(SH1107_t * dev, int row, int col, char * text, int text_len, bool invert)
 {
-	if (page >= dev->_pages) return;
-	int _text_len = text_len;
-	if (_text_len > 8) _text_len = 8;
+	int _length = text_len;
+	int _width = 0;
+	int _height = 0;
+	int _row = 0;
+	int _col = 0;
+	int _rowadd = 0;
+	int _coladd = 0;
+	if (dev->_direction == DIRECTION0) {
+		_width = dev->_width / 8;
+		_height = dev->_height / 8;
+		_row = row;
+		_col = col*8;
+		_rowadd = 0;
+		_coladd = 8;
+	} else if (dev->_direction == DIRECTION90) {
+		_width = dev->_height / 8;
+		_height = dev->_width / 8;
+		_row = col;
+		_col = (dev->_width-8) - (row*8);
+		_rowadd = 1;
+		_coladd = 0;
+	} else if (dev->_direction == DIRECTION180) {
+		_width = dev->_width / 8;
+		_height = dev->_height / 8;
+		_row = _height - row - 1;
+		_col = (dev->_width-8) - (col*8);
+		_rowadd = 0;
+		_coladd = -8;
+	} else if (dev->_direction == DIRECTION270) {
+		_width = dev->_height / 8;
+		_height = dev->_width / 8;
+		_row = (dev->_pages-1) - col;
+		_col = row*8;
+		_rowadd = -1;
+		_coladd = 0;
+	}
+	if (row >= _height) return;
+	if (col >= _width) return;
+	if (col + text_len > _width) _length = _width - col;
+	ESP_LOGD(TAG, "_direction=%d _width=%d _height=%d _length=%d _row=%d _col=%d", 
+		dev->_direction, _width, _height, _length, _row, _col);
 
-	uint8_t seg = 0;
+	//uint8_t seg = 0;
 	uint8_t image[8];
-	for (uint8_t i = 0; i < _text_len; i++) {
+	for (int i=0; i<_length; i++) {
 		memcpy(image, font8x8_basic_tr[(uint8_t)text[i]], 8);
-		if (invert) display_invert(image, 8);
-		display_image(dev, page, seg, image, 8);
-		seg = seg + 8;
+		if (invert) sh1107_display_invert(image, 8);
+		sh1107_display_rotate(image, dev->_direction);
+		sh1107_display_image(dev, _row, _col, image, 8);
+		_row = _row + _rowadd;
+		_col = _col + _coladd;
+		//seg = seg + 8;
 	}
 }
 
-void display_image(SH1107_t * dev, int page, int seg, uint8_t * images, int width)
+void sh1107_display_image(SH1107_t * dev, int page, int col, uint8_t * images, int width)
 {
 	if (page >= dev->_pages) return;
-	if (seg >= dev->_width) return;
+	if (col >= dev->_width) return;
 
-	uint8_t columLow = seg & 0x0F;
-	uint8_t columHigh = (seg >> 4) & 0x0F;
-	//ESP_LOGI(tag, "page=%x columLow=%x columHigh=%x",page,columLow,columHigh);
+	uint8_t columLow = col & 0x0F;
+	uint8_t columHigh = (col >> 4) & 0x0F;
+	//ESP_LOGI(TAG, "page=%x columLow=%x columHigh=%x",page,columLow,columHigh);
 
 	// Set Higher Column Start Address for Page Addressing Mode
 	spi_master_write_command(dev, (0x10 + columHigh));
@@ -172,23 +214,37 @@ void display_image(SH1107_t * dev, int page, int seg, uint8_t * images, int widt
 
 }
 
-void clear_screen(SH1107_t * dev, bool invert)
+void sh1107_clear_screen(SH1107_t * dev, bool invert)
 {
-	char zero[64];
-	memset(zero, 0, sizeof(zero));
+	uint8_t zero[64];
+	if (invert) {
+		memset(zero, 0xff, sizeof(zero));
+	} else {
+		memset(zero, 0x00, sizeof(zero));
+	}
 	for (int page = 0; page < dev->_pages; page++) {
-		display_text(dev, page, zero, dev->_width, invert);
+		sh1107_display_image(dev, page, 0, zero, dev->_width);
 	}
 }
 
-void clear_line(SH1107_t * dev, int page, bool invert)
+void sh1107_clear_line(SH1107_t * dev, int row, bool invert)
 {
-	char zero[64];
-	memset(zero, 0, sizeof(zero));
-	display_text(dev, page, zero, dev->_width, invert);
+	char space[1];
+	space[0] = 0x20;
+	if (dev->_direction == DIRECTION0 || dev->_direction == DIRECTION90) {
+		int _width = dev->_width / 8;
+		for (int col=0;col<_width;col++) {
+			sh1107_display_text(dev, row, col, space, 1, invert);
+		}
+	} else {
+		int _width = dev->_height / 8;
+		for (int col=0;col<_width;col++) {
+			sh1107_display_text(dev, row, col, space, 1, invert);
+		}
+	}
 }
 
-void display_contrast(SH1107_t * dev, int contrast) {
+void sh1107_display_contrast(SH1107_t * dev, int contrast) {
 	int _contrast = contrast;
 	if (contrast < 0x0) _contrast = 0;
 	if (contrast > 0xFF) _contrast = 0xFF;
@@ -197,87 +253,7 @@ void display_contrast(SH1107_t * dev, int contrast) {
 	spi_master_write_command(dev, _contrast);
 }
 
-void software_scroll(SH1107_t * dev, int start, int end)
-{
-	ESP_LOGD(tag, "software_scroll start=%d end=%d _pages=%d", start, end, dev->_pages);
-	if (start < 0 || end < 0) {
-		dev->_scEnable = false;
-	} else if (start >= dev->_pages || end >= dev->_pages) {
-		dev->_scEnable = false;
-	} else {
-		dev->_scEnable = true;
-		dev->_scStart = start;
-		dev->_scEnd = end;
-		dev->_scDirection = 1;
-		if (start > end ) dev->_scDirection = -1;
-		for (int i=0;i<dev->_pages;i++) {
-			dev->_page[i]._valid = false;
-			dev->_page[i]._segLen = 0;
-		}
-	}
-}
-
-void scroll_text(SH1107_t * dev, char * text, int text_len, bool invert)
-{
-	ESP_LOGD(tag, "dev->_scEnable=%d", dev->_scEnable);
-	if (dev->_scEnable == false) return;
-
-	int srcIndex = dev->_scEnd - dev->_scDirection;
-	while(1) {
-		int dstIndex = srcIndex + dev->_scDirection;
-		ESP_LOGD(tag, "srcIndex=%d dstIndex=%d", srcIndex,dstIndex);
-		dev->_page[dstIndex]._valid = dev->_page[srcIndex]._valid;
-		dev->_page[dstIndex]._segLen = dev->_page[srcIndex]._segLen;
-		for(int seg = 0; seg < dev->_width; seg++) {
-			dev->_page[dstIndex]._segs[seg] = dev->_page[srcIndex]._segs[seg];
-		}
-		ESP_LOGD(tag, "_valid=%d", dev->_page[dstIndex]._valid);
-		if (dev->_page[dstIndex]._valid) display_image(dev, dstIndex, 0, dev->_page[dstIndex]._segs, dev->_page[srcIndex]._segLen);
-		if (srcIndex == dev->_scStart) break;
-		srcIndex = srcIndex - dev->_scDirection;
-	}
-	
-	int _text_len = text_len;
-	//if (_text_len > 16) _text_len = 16;
-	if (_text_len > 8) _text_len = 8;
-	
-	uint8_t seg = 0;
-	uint8_t image[8];
-	for (uint8_t i = 0; i < _text_len; i++) {
-		memcpy(image, font8x8_basic_tr[(uint8_t)text[i]], 8);
-		if (invert) display_invert(image, 8);
-		display_image(dev, srcIndex, seg, image, 8);
-		for(int j=0;j<8;j++) dev->_page[srcIndex]._segs[seg+j] = image[j];
-		seg = seg + 8;
-	}
-	for (uint8_t i = _text_len; i < 8; i++) {
-		memcpy(image, font8x8_basic_tr[0x20], 8);
-		if (invert) display_invert(image, 8);
-		display_image(dev, srcIndex, seg, image, 8);
-		for(int j=0;j<8;j++) dev->_page[srcIndex]._segs[seg+j] = image[j];
-		seg = seg + 8;
-	}
-	dev->_page[srcIndex]._valid = true;
-	dev->_page[srcIndex]._segLen = seg;
-}
-
-void scroll_clear(SH1107_t * dev)
-{
-	ESP_LOGD(tag, "scroll_clear dev->_scEnable=%d", dev->_scEnable);
-	if (dev->_scEnable == false) return;
-	
-	int srcIndex = dev->_scEnd - dev->_scDirection;
-	while(1) {
-		int dstIndex = srcIndex + dev->_scDirection;
-		ESP_LOGD(tag, "dstIndex=%d", dstIndex);
-		clear_line(dev, dstIndex, false);
-		dev->_page[dstIndex]._valid = false;
-		if (dstIndex == dev->_scStart) break;
-		srcIndex = srcIndex - dev->_scDirection;
-	}
-}
-
-void display_invert(uint8_t *buf, size_t blen)
+void sh1107_display_invert(uint8_t *buf, size_t blen)
 {
 	uint8_t wk;
 	for(int i=0; i<blen; i++){
@@ -286,7 +262,8 @@ void display_invert(uint8_t *buf, size_t blen)
 	}
 }
 
-void display_fadeout(SH1107_t * dev)
+
+void sh1107_display_fadeout(SH1107_t * dev)
 {
 	uint8_t image[1];
 	for(int page=0; page<dev->_pages; page++) {
@@ -294,8 +271,64 @@ void display_fadeout(SH1107_t * dev)
 		for(int line=0; line<8; line++) {
 			image[0] = image[0] << 1;
 			for(int seg=0; seg<dev->_width; seg++) {
-				display_image(dev, page, seg, image, 1);
+				sh1107_display_image(dev, page, seg, image, 1);
 			}
 		}
 	}
 }
+
+void sh1107_display_direction(SH1107_t * dev, int dir) {
+	dev->_direction = dir;
+}
+
+static uint8_t rotate_byte(uint8_t ch1) {
+	uint8_t ch2 = 0;
+	for (int j=0;j<8;j++) {
+		ch2 = (ch2 << 1) + (ch1 & 0x01);
+		ch1 = ch1 >> 1;
+	}
+	return ch2;
+}
+
+void sh1107_display_rotate(uint8_t * buf, int dir)
+{
+	uint8_t wk[8];
+	if (dir == DIRECTION0) return;
+	for(int i=0; i<8; i++){
+		wk[i] = buf[i];
+		buf[i] = 0;
+	}
+	if (dir == DIRECTION90 || dir == DIRECTION270) {
+		uint8_t wk2[8];
+		uint8_t mask1 = 0x80;
+		for(int i=0;i<8;i++) {
+			wk2[i] = 0;
+			ESP_LOGD(TAG, "wk[%d]=%x", i, wk[i]);
+			uint8_t mask2 = 0x01;
+			for(int j=0;j<8;j++) {
+				if( (wk[j] & mask1) == mask1) wk2[i] = wk2[i] + mask2;
+				mask2 = mask2 << 1;
+			}
+			mask1 = mask1 >> 1;
+		}
+		for(int i=0; i<8; i++){
+			ESP_LOGD(TAG, "wk2[%d]=%x", i, wk2[i]);
+		}
+
+		for(int i=0;i<8;i++) {
+			if (dir == DIRECTION90) {
+				buf[i] = wk2[i];
+			} else {
+				buf[i] = rotate_byte(wk2[7-i]);
+			}
+		}
+	} else if (dir == DIRECTION180) {
+		for(int i=0;i<8;i++) {
+			buf[i] = rotate_byte(wk[7-i]);
+		}
+
+	}
+	return;
+
+}
+

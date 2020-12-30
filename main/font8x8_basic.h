@@ -1,3 +1,6 @@
+#ifndef MAIN_FONT8X8_BASIC_H_
+#define MAIN_FONT8X8_BASIC_H_
+
 /*
  * font8x8_basic.h
  *
@@ -5,8 +8,7 @@
  *      Author: yanbe
  */
 
-#ifndef MAIN_FONT8X8_BASIC_H_
-#define MAIN_FONT8X8_BASIC_H_
+#include <stdint.h>
 
 /*
    Constant: font8x8_basic_tr
@@ -38,7 +40,8 @@
 	}
 */
 
-static uint8_t font8x8_basic_tr[128][8] = {
+//static uint8_t font8x8_basic_tr[128][8] = {
+uint8_t font8x8_basic_tr[128][8] = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },   // U+0000 (nul)
     { 0x00, 0x04, 0x02, 0xFF, 0x02, 0x04, 0x00, 0x00 },   // U+0001 (Up Allow)
     { 0x00, 0x20, 0x40, 0xFF, 0x40, 0x20, 0x00, 0x00 },   // U+0002 (Down Allow)
@@ -170,5 +173,4 @@ static uint8_t font8x8_basic_tr[128][8] = {
 };
 
 #endif /* MAIN_FONT8X8_BASIC_H_ */
-
 
